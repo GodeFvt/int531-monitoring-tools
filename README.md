@@ -1,13 +1,45 @@
-### This project contains a set of monitoring tools used for the project in the INT531 Site Reliability Engineering course
+# Monitoring Tools Setup Guide
 
-### Installation Guide
+This project provides a set of monitoring tools used for the **INT531 Site Reliability Engineering** course.
 
-1. **Download and install Node Exporter**  
-   Get the latest release from the official Prometheus page:  
-   https://prometheus.io/download/#node_exporter
+---
 
-2. **Start the monitoring stack**  
-   After the installation is complete, run:
-   ```bash
-   docker compose -f monitoring.compose.yml up -d
-   ```
+## 🚀 Installation Guide
+
+### 1. Install Node Exporter
+
+Download the latest Node Exporter release from the official Prometheus website:
+
+🔗 https://prometheus.io/download/#node_exporter
+
+#### 1.1. Download the Linux release
+
+(_Example screenshot: `./docs/node_exporter_download.png`_)
+
+#### 1.2. Run the following commands:
+
+> ⚠️ **Important:** Replace `<VERSION>`, `<OS>`, and `<ARCH>` with the correct values from the download page.
+
+```bash
+# Download the Node Exporter tar.gz
+wget https://github.com/prometheus/node_exporter/releases/download/v<VERSION>/node_exporter-<VERSION>.<OS>-<ARCH>.tar.gz
+
+# Extract the archive
+tar xvfz node_exporter-*.*-amd64.tar.gz
+
+# Move into the extracted folder
+cd node_exporter-*.*-amd64
+
+# Start Node Exporter
+./node_exporter
+```
+
+### 📦 2. Start the Monitoring Stack
+
+Once Node Exporter is installed, start the full monitoring stack using Docker Compose:
+
+```
+docker compose -f monitoring.compose.yml up -d
+```
+
+This will launch Prometheus, Grafana, and the other configured services in detached mode.
