@@ -5,6 +5,7 @@ services:
     restart: unless-stopped
     environment:
       - GF_PLUGINS_PREINSTALL=grafana-clock-panel
+      - GF_SERVER_ROOT_URL=http://10.13.104.124:3000/
     ports:
       - "3000:3000"
     volumes:
