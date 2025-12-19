@@ -1,0 +1,382 @@
+groups:
+  - name: infrastructure_alerts
+    rules:
+      # Service Down
+      - alert: InstanceDown
+        expr: up == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Instance {{ $labels.instance }} down"
+          description: "{{ $labels.instance }} of job {{ $labels.job }} has been down for more than 1 minute"
+          runbook_url: "https://github.com/GodeFvt/int531-monitoring-tools/blob/main/docs/runbook-infrastructure.md#instancedown"
+
+      # High CPU Usage
+      - alert: HighCpuUsage
+        expr: 100 - (avg by(instance) (rate(node_cpu_seconds_total{mode="idle"}[5m])) * 100) > 80
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High CPU usage on {{ $labels.instance }}"
+          description: "CPU usage on {{ $labels.instance }} is {{ $value | humanize }}%"
+          runbook_url: "https://github.com/GodeFvt/int531-monitoring-tools/blob/main/docs/runbook-infrastructure.md#highcpuusage"
+
+      # Critical CPU Usage
+      - alert: CriticalCpuUsage
+        expr: 100 - (avg by(instance) (rate(node_cpu_seconds_total{mode="idle"}[5m])) * 100) > 95
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Critical CPU usage on {{ $labels.instance }}"
+          description: "CPU usage on {{ $labels.instance }} is {{ $value | humanize }}%"
+          runbook_url: "https://github.com/GodeFvt/int531-monitoring-tools/blob/main/docs/runbook-infrastructure.md#criticalcpuusage"
+
+      # High Memory Usage
+      - alert: HighMemoryUsage
+        expr: (node_memory_MemTotal_bytes - node_memory_MemAvailable_bytes) / node_memory_MemTotal_bytes * 100 > 80
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High Memory usage on {{ $labels.instance }}"
+          description: "Memory usage on {{ $labels.instance }} is {{ $value | humanize }}%"
+          runbook_url: "https://github.com/GodeFvt/int531-monitoring-tools/blob/main/docs/runbook-infrastructure.md#highmemoryusage"
+
+      # Critical Memory Usage
+      - alert: CriticalMemoryUsage
+        expr: (node_memory_MemTotal_bytes - node_memory_MemAvailable_bytes) / node_memory_MemTotal_bytes * 100 > 95
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Critical Memory usage on {{ $labels.instance }}"
+          description: "Memory usage on {{ $labels.instance }} is {{ $value | humanize }}%"
+          runbook_url: "https://github.com/GodeFvt/int531-monitoring-tools/blob/main/docs/runbook-infrastructure.md#criticalmemoryusage"
+
+      # Low Disk Space
+      - alert: LowDiskSpace
+        expr: node_filesystem_avail_bytes{mountpoint="/"} / node_filesystem_size_bytes{mountpoint="/"} * 100 < 20
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Low Disk Space on {{ $labels.instance }}"
+          description: "Disk space on {{ $labels.instance }} is {{ $value | humanize }}% available"
+          runbook_url: "https://github.com/GodeFvt/int531-monitoring-tools/blob/main/docs/runbook-infrastructure.md#lowdiskspace"
+
+      # Critical Disk Space
+      - alert: CriticalDiskSpace
+        expr: node_filesystem_avail_bytes{mountpoint="/"} / node_filesystem_size_bytes{mountpoint="/"} * 100 < 10
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Critical Disk Space on {{ $labels.instance }}"
+          description: "Disk space on {{ $labels.instance }} is {{ $value | humanize }}% available"
+          runbook_url: "https://github.com/GodeFvt/int531-monitoring-tools/blob/main/docs/runbook-infrastructure.md#criticaldiskspace"
+
+      # High Disk I/O
+      - alert: HighDiskIO
+        expr: rate(node_disk_io_time_seconds_total[5m]) > 0.8
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High Disk I/O on {{ $labels.instance }}"
+          description: "Disk I/O utilization on {{ $labels.instance }} is high"
+          runbook_url: "https://github.com/GodeFvt/int531-monitoring-tools/blob/main/docs/runbook-infrastructure.md#highdiskio"
+
+  - name: backend_alerts
+    rules:
+      # Traffic: High Request Rate
+      - alert: HighRequestRate
+        expr: rate(http_requests_total[5m]) > 100
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High request rate detected"
+          description: "Backend is receiving {{ $value | humanize }} requests per second"
+          runbook_url: "https://github.com/GodeFvt/int531-monitoring-tools/blob/main/docs/runbook-backend.md#highrequestrate"
+
+      # Traffic: Low Request Rate (possible issue)
+      - alert: LowRequestRate
+        expr: rate(http_requests_total[5m]) < 0.1
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Unusually low request rate"
+          description: "Backend is receiving only {{ $value | humanize }} requests per second"
+          runbook_url: "https://github.com/GodeFvt/int531-monitoring-tools/blob/main/docs/runbook-backend.md#lowrequestrate"
+
+      # Errors: High Error Rate
+      - alert: HighErrorRate
+        expr: rate(http_requests_errors_total[5m]) / rate(http_requests_total[5m]) > 0.05
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Backend error rate is above 5%"
+          description: "Error rate is {{ $value | humanizePercentage }}"
+          runbook_url: "https://github.com/GodeFvt/int531-monitoring-tools/blob/main/docs/runbook-backend.md#higherrorrate"
+
+      # Errors: Critical Error Rate
+      - alert: CriticalErrorRate
+        expr: rate(http_requests_errors_total[5m]) / rate(http_requests_total[5m]) > 0.20
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Backend error rate is critical (> 20%)"
+          description: "Error rate is {{ $value | humanizePercentage }}"
+          runbook_url: "https://github.com/GodeFvt/int531-monitoring-tools/blob/main/docs/runbook-backend.md#criticalerrorrate"
+
+      # Latency: High P95 Latency
+      - alert: HighLatencyP95
+        expr: histogram_quantile(0.95, rate(http_request_duration_seconds_bucket[5m])) > 0.5
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Backend P95 latency is high (> 500ms)"
+          description: "P95 latency is {{ $value | humanizeDuration }}"
+          runbook_url: "https://github.com/GodeFvt/int531-monitoring-tools/blob/main/docs/runbook-backend.md#highlatencyp95"
+
+      # Latency: Critical P95 Latency
+      - alert: CriticalLatencyP95
+        expr: histogram_quantile(0.95, rate(http_request_duration_seconds_bucket[5m])) > 2
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Backend P95 latency is critical (> 2s)"
+          description: "P95 latency is {{ $value | humanizeDuration }}"
+          runbook_url: "https://github.com/GodeFvt/int531-monitoring-tools/blob/main/docs/runbook-backend.md#criticallatencyp95"
+
+      # Latency: High P99 Latency
+      - alert: HighLatencyP99
+        expr: histogram_quantile(0.99, rate(http_request_duration_seconds_bucket[5m])) > 1
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Backend P99 latency is high (> 1s)"
+          description: "P99 latency is {{ $value | humanizeDuration }}"
+          runbook_url: "https://github.com/GodeFvt/int531-monitoring-tools/blob/main/docs/runbook-backend.md#highlatencyp99"
+
+      # Saturation: High Active Connections
+      - alert: HighActiveConnections
+        expr: db_active_connections > 50
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High number of active database connections"
+          description: "{{ $value }} active connections from backend"
+          runbook_url: "https://github.com/GodeFvt/int531-monitoring-tools/blob/main/docs/runbook-backend.md#highactiveconnections"
+
+      # Database Errors from Backend
+      - alert: BackendDbErrors
+        expr: rate(db_query_errors_total[5m]) > 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Database errors detected from backend"
+          description: "Backend is experiencing database query errors"
+          runbook_url: "https://github.com/GodeFvt/int531-monitoring-tools/blob/main/docs/runbook-backend.md#backenddberrors"
+
+  - name: frontend_alerts
+    rules:
+      # Traffic: High Page Load Rate
+      - alert: HighPageLoadRate
+        expr: rate(frontend_page_loads_total[5m]) > 50
+        for: 5m
+        labels:
+          severity: info
+        annotations:
+          summary: "High page load rate detected"
+          description: "Frontend is serving {{ $value | humanize }} page loads per second"
+          runbook_url: "https://github.com/GodeFvt/int531-monitoring-tools/blob/main/docs/runbook-frontend.md#highpageloadrate"
+
+      # Errors: High Frontend Error Rate
+      - alert: HighFrontendErrorRate
+        expr: rate(frontend_errors_total[5m]) / rate(frontend_page_loads_total[5m]) > 0.05
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Frontend error rate is above 5%"
+          description: "Frontend error rate is {{ $value | humanizePercentage }}"
+          runbook_url: "https://github.com/GodeFvt/int531-monitoring-tools/blob/main/docs/runbook-frontend.md#highfrontenderrorrate"
+
+      # Errors: Critical Frontend Error Rate
+      - alert: CriticalFrontendErrorRate
+        expr: rate(frontend_errors_total[5m]) / rate(frontend_page_loads_total[5m]) > 0.20
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Frontend error rate is critical (> 20%)"
+          description: "Frontend error rate is {{ $value | humanizePercentage }}"
+          runbook_url: "https://github.com/GodeFvt/int531-monitoring-tools/blob/main/docs/runbook-frontend.md#criticalfrontenderrorrate"
+
+      # Latency: High Page Load Time
+      - alert: HighPageLoadTime
+        expr: rate(frontend_page_load_duration_seconds_sum[5m]) / rate(frontend_page_load_duration_seconds_count[5m]) > 3
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Frontend page load time is high (> 3s)"
+          description: "Average page load time is {{ $value | humanizeDuration }}"
+          runbook_url: "https://github.com/GodeFvt/int531-monitoring-tools/blob/main/docs/runbook-frontend.md#highpageloadtime"
+
+      # Latency: Critical Page Load Time
+      - alert: CriticalPageLoadTime
+        expr: rate(frontend_page_load_duration_seconds_sum[5m]) / rate(frontend_page_load_duration_seconds_count[5m]) > 10
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Frontend page load time is critical (> 10s)"
+          description: "Average page load time is {{ $value | humanizeDuration }}"
+          runbook_url: "https://github.com/GodeFvt/int531-monitoring-tools/blob/main/docs/runbook-frontend.md#criticalpageloadtime"
+
+      # Latency: High API Response Time (from frontend perspective)
+      - alert: HighFrontendAPILatency
+        expr: rate(frontend_api_duration_seconds_sum[5m]) / rate(frontend_api_duration_seconds_count[5m]) > 1
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High API response time observed from frontend"
+          description: "Average API response time is {{ $value | humanizeDuration }}"
+          runbook_url: "https://github.com/GodeFvt/int531-monitoring-tools/blob/main/docs/runbook-frontend.md#highfrontendapilatency"
+
+      # Saturation: High Memory Usage (browser)
+      - alert: HighBrowserMemoryUsage
+        expr: frontend_memory_usage_bytes > 500000000
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High browser memory usage detected"
+          description: "Browser is using {{ $value | humanize1024 }}B of memory"
+          runbook_url: "https://github.com/GodeFvt/int531-monitoring-tools/blob/main/docs/runbook-frontend.md#highbrowsermemoryusage"
+
+  - name: database_alerts
+    rules:
+      # MySQL/MariaDB Down
+      - alert: MySQLDown
+        expr: mysql_up == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "MySQL/MariaDB is down"
+          description: "MySQL database on {{ $labels.instance }} has been down for more than 1 minute"
+          runbook_url: "https://github.com/GodeFvt/int531-monitoring-tools/blob/main/docs/runbooks.md#mysqldown"
+
+      # High Connection Usage
+      - alert: MySQLHighConnectionUsage
+        expr: (mysql_global_status_threads_connected / mysql_global_variables_max_connections) * 100 > 80
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "MySQL connection usage is high (> 80%)"
+          description: "MySQL connection usage on {{ $labels.instance }} is {{ $value | humanize }}%"
+          runbook_url: "https://github.com/GodeFvt/int531-monitoring-tools/blob/main/docs/runbooks.md#mysqlhighconnectionusage"
+
+      # Connection Usage Critical
+      - alert: MySQLConnectionUsageCritical
+        expr: (mysql_global_status_threads_connected / mysql_global_variables_max_connections) * 100 > 95
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "MySQL connection usage is critical (> 95%)"
+          description: "MySQL connection usage on {{ $labels.instance }} is {{ $value | humanize }}%. Database may refuse new connections soon"
+          runbook_url: "https://github.com/GodeFvt/int531-monitoring-tools/blob/main/docs/runbooks.md#mysqlconnectionusagecritical"
+
+      # High Slow Queries
+      - alert: MySQLHighSlowQueries
+        expr: rate(mysql_global_status_slow_queries[5m]) > 1
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "MySQL has high rate of slow queries"
+          description: "MySQL on {{ $labels.instance }} has {{ $value | humanize }} slow queries per second"
+          runbook_url: "https://github.com/GodeFvt/int531-monitoring-tools/blob/main/docs/runbooks.md#mysqlhighslowqueries"
+
+      # High Aborted Connections
+      - alert: MySQLHighAbortedConnections
+        expr: rate(mysql_global_status_aborted_connects[5m]) > 1
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "MySQL has high rate of aborted connections"
+          description: "MySQL on {{ $labels.instance }} has {{ $value | humanize }} aborted connections per second"
+          runbook_url: "https://github.com/GodeFvt/int531-monitoring-tools/blob/main/docs/runbooks.md#mysqlhighabortedconnections"
+
+      # Low Buffer Pool Hit Rate
+      - alert: MySQLLowBufferPoolHitRate
+        expr: (1 - (rate(mysql_global_status_innodb_buffer_pool_reads[5m]) / rate(mysql_global_status_innodb_buffer_pool_read_requests[5m]))) * 100 < 95
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "MySQL InnoDB buffer pool hit rate is low (< 95%)"
+          description: "MySQL buffer pool hit rate on {{ $labels.instance }} is {{ $value | humanize }}%"
+          runbook_url: "https://github.com/GodeFvt/int531-monitoring-tools/blob/main/docs/runbooks.md#mysqllowbufferpoolhitrate"
+
+      # High InnoDB Row Lock Time
+      - alert: MySQLHighRowLockTime
+        expr: rate(mysql_global_status_innodb_row_lock_time[5m]) / rate(mysql_global_status_innodb_row_lock_waits[5m]) / 1000 > 1
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "MySQL has high InnoDB row lock time"
+          description: "MySQL on {{ $labels.instance }} has average row lock time of {{ $value | humanize }}s"
+          runbook_url: "https://github.com/GodeFvt/int531-monitoring-tools/blob/main/docs/runbooks.md#mysqlhighrowlocktime"
+
+      # High Table Lock Waits
+      - alert: MySQLHighTableLockWaits
+        expr: rate(mysql_global_status_table_locks_waited[5m]) > 10
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "MySQL has high rate of table lock waits"
+          description: "MySQL on {{ $labels.instance }} has {{ $value | humanize }} table lock waits per second"
+          runbook_url: "https://github.com/GodeFvt/int531-monitoring-tools/blob/main/docs/runbooks.md#mysqlhightablelockwaits"
+
+      # Replication Lag (if using replication)
+      - alert: MySQLReplicationLag
+        expr: mysql_slave_lag_seconds > 30
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "MySQL replication lag is high"
+          description: "MySQL replication on {{ $labels.instance }} is lagging by {{ $value | humanize }} seconds"
+          runbook_url: "https://github.com/GodeFvt/int531-monitoring-tools/blob/main/docs/runbooks.md#mysqlreplicationlag"
+
+      # High Threads Running
+      - alert: MySQLHighThreadsRunning
+        expr: mysql_global_status_threads_running > 50
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "MySQL has high number of threads running"
+          description: "MySQL on {{ $labels.instance }} has {{ $value }} threads currently running"
+          runbook_url: "https://github.com/GodeFvt/int531-monitoring-tools/blob/main/docs/runbooks.md#mysqlhighthreadsrunning"

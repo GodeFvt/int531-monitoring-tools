@@ -5,7 +5,7 @@ services:
     restart: unless-stopped
     environment:
       - GF_PLUGINS_PREINSTALL=grafana-clock-panel
-      - GF_SERVER_ROOT_URL=http://10.13.104.124:3000/
+      - GF_SERVER_ROOT_URL=${GF_SERVER_ROOT_URL}
     ports:
       - "3000:3000"
     volumes:
@@ -23,8 +23,29 @@ services:
       - "9090:9090"
     volumes:
       - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+      - ./prometheus/alert_rules.yml:/etc/prometheus/alert_rules.yml
     networks:
       - monitoring
+
+  mysqld_exporter:
+    image: prom/mysqld-exporter:latest
+    container_name: x-mysqld-exporter
+    restart: unless-stopped
+    networks:
+      - monitoring
+    environment:
+      MYSQLD_EXPORTER_PASSWORD: ${MYSQL_PASSWORD}
+    ports:
+      - "9104:9104"
+    command:
+      - --mysqld.username=${MYSQL_USER}
+      - --mysqld.address=${MYSQL_HOST}:${MYSQL_PORT}
+      - --collect.info_schema.processlist
+      - --collect.info_schema.innodb_metrics
+      - --collect.info_schema.tablestats
+      - --collect.info_schema.tables
+      - --collect.info_schema.userstats
+      - --collect.engine_innodb_status
 
 networks:
   monitoring:
